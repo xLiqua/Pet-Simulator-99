@@ -1,8 +1,6 @@
 -- Most advanced egg opened
 -- PS99
 
--- Hello this is for testing purposes
-
 getgenv().autoEgg = false
 getgenv().autoultimate = false
 getgenv().antiafk = false
@@ -13,46 +11,45 @@ local Window = Rayfield:CreateWindow({
    Name = "RocketRealms",
    LoadingTitle = "Play.RocketRealms.net",
    LoadingSubtitle = "by Peanut",
-   ConfigurationSaving = {
-      Enabled = false,
-      FolderName = nil,
-      FileName = "Big Hub"
-   },
-   Discord = {
-      Enabled = false,
-      Invite = "noinvitelink", 
-      RememberJoins = true 
-   },
-   KeySystem = false, 
-   KeySettings = {
-      Title = "Untitled",
-      Subtitle = "Key System",
-      Note = "No method of obtaining the key is provided",
-      FileName = "Key", 
-      SaveKey = true, 
-      GrabKeyFromSite = false,
-      Key = {"Hello"} 
-   }
+   ConfigurationSaving = { Enabled = false, FolderName = nil, FileName = "Big Hub" },
+   Discord = { Enabled = false, Invite = "noinvitelink", RememberJoins = true },
+   KeySystem = false
 })
 
 -- Locals
 local Tab = Window:CreateTab("Eggs", 4483362458)
 local Section = Tab:CreateSection("Automation!")
 
-local Eggs = game.Players.LocalPlayer.PlayerScripts.Scripts.Game['Egg Opening Frontend']
-getsenv(Eggs).PlayEggAnimation = function() return end
-
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Network = ReplicatedStorage:WaitForChild("Network")
-local EggCmds = require(ReplicatedStorage.Library.Client.EggCmds)
 
-local VirtualUser = game:GetService("VirtualUser")
-local PlayerGui = game.Players.LocalPlayer:WaitForChild("PlayerGui")
-local existingGui = PlayerGui:FindFirstChild("AntiAFKGui")
+-- Load EggCmds safely
+local success, EggCmds = pcall(function()
+    return require(ReplicatedStorage.Library.Client.EggCmds)
+end)
+
+if not success then
+    warn("Failed to load EggCmds module!")
+    EggCmds = nil
+end
+
+-- Function to get max egg hatch
+local function getEggAmount()
+    if not EggCmds then return 1 end
+    local success, amount = pcall(function()
+        return EggCmds.GetMaxHatch()
+    end)
+    return success and amount or 1
+end
+
+-- Store default hatch amount (always getMaxHatch())
+getgenv().hatchAmount = getEggAmount()
 
 local function find_nearest_egg()
     local nearest, nearest_distance = nil, math.huge
     local eggs = workspace.__THINGS:FindFirstChild("CustomEggs")
+
+    if not eggs or #eggs:GetChildren() == 0 then return nil end
 
     for _, egg in ipairs(eggs:GetChildren()) do
         if egg:IsA("Model") and egg.PrimaryPart then
@@ -66,23 +63,13 @@ local function find_nearest_egg()
     return nearest
 end
 
-local function getEggAmount()
-    local success, amount = pcall(function()
-        return EggCmds.GetMaxHatch()
-    end)
-    return amount
-end
-
 local function hatch_nearest_egg()
     local nearest_egg = find_nearest_egg()
-
-    local eggName = nearest_egg.Name
-    local eggAmount = getEggAmount()
+    if not nearest_egg then return end
 
     local success, result = pcall(function()
-        return Network:WaitForChild("CustomEggs_Hatch"):InvokeServer(eggName, eggAmount)
+        return Network:WaitForChild("CustomEggs_Hatch"):InvokeServer(nearest_egg.Name, getgenv().hatchAmount)
     end)
-
 end
 
 local Toggle = Tab:CreateToggle({
@@ -101,65 +88,53 @@ local Toggle = Tab:CreateToggle({
 
 local function autoUltimateUser()
     while getgenv().autoultimate do
-        local args = {
-            [1] = "Pet Surge"
-        }
         local success, result = pcall(function()
-            Network:WaitForChild("Ultimates: Activate"):InvokeServer(unpack(args))
+            return Network:WaitForChild("Ultimates: Activate"):InvokeServer("Pet Surge")
         end)
-        task.wait() -- Prevent overloading
+        task.wait(1) -- Prevent CPU overload
     end
 end
 
 local Toggle = Tab:CreateToggle({
     Name = "Auto Ultimate",
     CurrentValue = false,
-    Flag = "Toggle1",
+    Flag = "Toggle2",
     Callback = function(Value)
         getgenv().autoultimate = Value 
         if Value then
-            task.wait()
-            autoUltimateUser()
+            task.spawn(autoUltimateUser)
         end
     end,
 })
+
+-- Disable PlayEggAnimation safely
+local Eggs = game.Players.LocalPlayer.PlayerScripts.Scripts.Game:FindFirstChild('Egg Opening Frontend')
+if Eggs then
+    local env = getsenv(Eggs)
+    if env and env.PlayEggAnimation then
+        env.PlayEggAnimation = function() return end
+    else
+        warn("Failed to disable PlayEggAnimation: getsenv() returned nil")
+    end
+else
+    warn("Eggs script not found!")
+end
 
 local Button = Tab:CreateButton({
     Name = "Anti AFK",
     Callback = function()
         getgenv().antiafk = true
-        if existingGui then
-            existingGui:Destroy()
-            print("Existing Anti-AFK GUI destroyed.")
+
+        local VirtualUser = game:GetService("VirtualUser")
+        local PlayerGui = game.Players.LocalPlayer:WaitForChild("PlayerGui")
+
+        if PlayerGui:FindFirstChild("AntiAFKGui") then
+            PlayerGui.AntiAFKGui:Destroy()
         end
-        
-        local ScreenGui = Instance.new("ScreenGui")
-        local Frame = Instance.new("Frame")
-        local TextLabel = Instance.new("TextLabel")
-        
-        ScreenGui.Name = "AntiAFKGui"
-        ScreenGui.Parent = PlayerGui
-        
-        Frame.Parent = ScreenGui
-        Frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-        Frame.Size = UDim2.new(0, 300, 0, 50)
-        Frame.Position = UDim2.new(0, 10, 0, 10)
-        Frame.BorderSizePixel = 0
-        Frame.Active = true
-        Frame.Draggable = true
-        
-        TextLabel.Parent = Frame
-        TextLabel.Size = UDim2.new(1, 0, 1, 0)
-        TextLabel.BackgroundTransparency = 1
-        TextLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-        TextLabel.Font = Enum.Font.SourceSansBold
-        TextLabel.TextSize = 20
-        TextLabel.Text = "Anti-AFK Active"
         
         local function sendInput()
             VirtualUser:CaptureController()
             VirtualUser:ClickButton2(Vector2.new())
-            print("Anti-AFK: Simulated input sent.")
         end
         
         while getgenv().antiafk do
