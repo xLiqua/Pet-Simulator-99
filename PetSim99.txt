@@ -1,8 +1,6 @@
 -- Most advanced egg opened
 -- PS99
 
--- Hello this is for testing purposes
-
 getgenv().autoEgg = false
 getgenv().autoultimate = false
 getgenv().antiafk = false
@@ -39,8 +37,7 @@ local Window = Rayfield:CreateWindow({
 local Tab = Window:CreateTab("Eggs", 4483362458)
 local Section = Tab:CreateSection("Automation!")
 
-local Eggs = game.Players.LocalPlayer.PlayerScripts.Scripts.Game['Egg Opening Frontend']
-getsenv(Eggs).PlayEggAnimation = function() return end
+local Eggs = game.Players.LocalPlayer.PlayerScripts.Scripts.Game['Egg Opening Frontend']getsenv(Eggs).PlayEggAnimation = function() return end
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Network = ReplicatedStorage:WaitForChild("Network")
